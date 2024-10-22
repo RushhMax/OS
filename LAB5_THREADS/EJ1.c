@@ -6,8 +6,12 @@ DWORD Sum; /* data is shared by the thread(s) */
 /* The thread will execute in this function */
 DWORD WINAPI Summation(LPVOID Param){
     DWORD Upper = *(DWORD*)Param;
-    for (DWORD i = 1; i <= Upper; i++)
+    printf("Sumando ", 1);
+    for (DWORD i = 1; i <= Upper; i++){
+        printf(" + %lu ", i);
         Sum += i;
+    }
+    printf("\n");
     return 0;
 }
 
@@ -16,6 +20,7 @@ int main(int argc, char *argv[]){
     HANDLE ThreadHandle;
     int Param;
     Param = atoi(argv[1]);
+
     /* create the thread */
     ThreadHandle = CreateThread(
         NULL, /* default security attributes */
@@ -30,5 +35,5 @@ int main(int argc, char *argv[]){
     /* close the thread handle */
     CloseHandle(ThreadHandle);
     
-    printf("sum = %d∖n",Sum);
+    printf("sum = %d",Sum);
 }
