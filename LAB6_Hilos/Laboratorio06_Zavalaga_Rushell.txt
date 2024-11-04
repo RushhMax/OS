@@ -1,0 +1,166 @@
+// SISTEMAS OPERATIVOS 
+// LABORATORIO 6 
+// realizado por: Rushell Vanessa Zavalaga Orozco
+
+// Comandos para compilar y ejecutar los programas
+// gcc -o ejercicio1 ejercicio1.c -lpthread
+
+// EJERCICIO 1
+
+// Crear un programa que sea capaz de contar cuántas vocales hay en un fichero. El programa padre debe lanzar cinco procesos hijo, donde cada uno de ellos se ocupará de contar una vocal concreta (que puede ser minúscula o mayúscula). Cada subproceso que cuenta vocales deberá dejar el resultado en un fichero. El programa padre se ocupará de recuperar los resultados de los ficheros, sumar todos los subtotales y mostrar el resultado final en pantalla.
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <pthread.h>
+
+void *contarVocales(void *vocal) {
+    char *v = (char *) vocal;
+    int contador = 0;
+    char c;
+    FILE *fichero = fopen("vocales.txt", "r");
+    if (fichero == NULL) {
+        perror("Error! No se pudo abrir el archivo de entrada! ");
+        pthread_exit(NULL);
+    }
+
+    while ((c = fgetc(fichero)) != EOF) {
+        if (c == *v || c == *v - 32) { 
+            contador++;
+        }
+    }
+    fclose(fichero);
+
+    char nombreFichero[20];
+    sprintf(nombreFichero, "vocal%c.txt", *v);
+    fichero = fopen(nombreFichero, "w");
+    if (fichero == NULL) {
+        perror("Error al abrir el archivo de salida");
+        pthread_exit(NULL);
+    }
+    fprintf(fichero, "%d", contador);
+    fclose(fichero);
+
+    pthread_exit(NULL);
+}
+
+int main() {
+    pthread_t hiloA, hiloE, hiloI, hiloO, hiloU;
+
+    pthread_create(&hiloA, NULL, contarVocales, "a");
+    pthread_create(&hiloE, NULL, contarVocales, "e");
+    pthread_create(&hiloI, NULL, contarVocales, "i");
+    pthread_create(&hiloO, NULL, contarVocales, "o");
+    pthread_create(&hiloU, NULL, contarVocales, "u");
+
+    pthread_join(hiloA, NULL);
+    pthread_join(hiloE, NULL);
+    pthread_join(hiloI, NULL);
+    pthread_join(hiloO, NULL);
+    pthread_join(hiloU, NULL);
+
+    int contadorA, contadorE, contadorI, contadorO, contadorU;
+    FILE *fA = fopen("vocala.txt", "r");
+    FILE *fE = fopen("vocale.txt", "r");
+    FILE *fI = fopen("vocali.txt", "r");
+    FILE *fO = fopen("vocalo.txt", "r");
+    FILE *fU = fopen("vocalu.txt", "r");
+
+    fscanf(fA, "%d", &contadorA);
+    fscanf(fE, "%d", &contadorE);
+    fscanf(fI, "%d", &contadorI);
+    fscanf(fO, "%d", &contadorO);
+    fscanf(fU, "%d", &contadorU);
+
+    fclose(fA);
+    fclose(fE);
+    fclose(fI);
+    fclose(fO);
+    fclose(fU);
+
+    int total = contadorA + contadorE + contadorI + contadorO + contadorU;
+    printf("Vocales a = %d, e = %d, i = %d, o = %d, u = %d \n ",
+            contadorA, contadorE, contadorI, contadorO, contadorU);
+    printf("Total de vocales: %d\n", total);
+
+    return 0;
+}
+
+// EJERCICIO 2
+
+// Dado un archivo de texto que contiene una lista de números enteros. El primer valor de la lista es el número de entradas (números) del resto del archivo. Escriba un programa que lea el archivo en un array (ubicado en la memoria principal) y obtenga el valor máximo usando varios hilos. Para obtener el valor máximo, el array debe dividirse en tantos bloques como número de hilos. De esta manera, cada hilo calcula el valor máximo de su porción de array asignada. Luego, el programa principal calcula el máximo global a partir de los valores parciales proporcionados por los hilos.
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <limits.h>
+
+typedef struct thread_data {
+   int *numeros;
+   int rangoInicial;
+   int rangoFinal;
+   int max;
+
+} thread_data;
+
+void *valorMaximo(void *arg) {
+    thread_data *t_data = (thread_data *) arg;
+    int *numeros = t_data->numeros;
+    int rangoInicial = t_data->rangoInicial;
+    int rangoFinal = t_data->rangoFinal;
+
+    printf("Calculando max entre %d y %d\n", rangoInicial, rangoFinal);
+
+    int max = numeros[rangoInicial];
+    for (int i = rangoInicial; i < rangoFinal; i++) {
+        if (numeros[i] > max) {
+            max = numeros[i];
+        }
+    }
+
+    t_data->max = max;
+    pthread_exit(NULL);
+}
+
+int main() {
+    
+    FILE *fichero = fopen("numeros.txt", "r");
+    if (fichero == NULL) {
+        perror("Error! No se pudo abrir el archivo de entrada! ");
+        return -1;
+    }
+
+    int n;
+    fscanf(fichero, "%d", &n);
+    int *numeros = (int *) malloc(n * sizeof(int));
+    for (int i = 0; i < n; i++) {
+        fscanf(fichero, "%d", &numeros[i]);
+    }
+
+    fclose(fichero);
+
+    int numHilos = 10;
+    printf("Ingrese cantidad de hilos no mayor a %d\n", n);
+    scanf("%d", &numHilos);
+    pthread_t hilos[numHilos];
+
+    int maxGLOBAL = INT_MIN;
+    
+    for (int i = 0; i < numHilos; i++) {
+        thread_data t_data;
+        t_data.numeros = numeros;
+        t_data.rangoInicial = i * (n / numHilos);
+        t_data.rangoFinal = (i + 1) * (n / numHilos);
+        pthread_create(&hilos[i], NULL, valorMaximo, (void *)&t_data);
+        pthread_join(hilos[i], NULL);
+        if(t_data.max > maxGLOBAL){
+            maxGLOBAL = t_data.max;
+        }
+    }
+
+    printf("Máximo Global: %d\n", maxGLOBAL);
+
+    return 0;
+}

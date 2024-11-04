@@ -1,0 +1,80 @@
+----
+Hilo1.c
+----
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <pthread.h>
+
+void *hola(void *arg) {
+    char *msg = "Hola";
+    int i;
+    for(i=0; i<strlen(msg); i++) {
+        printf("%c", msg[i]);
+        fflush(stdout);
+        usleep(1000000);
+    }
+    return NULL ;
+}
+
+void *mundo(void *arg) {
+    char *msg = " mundo";
+    int i;
+    for(i=0; i<strlen(msg); i++) {
+        printf("%c", msg[i]);
+        fflush(stdout);
+        usleep(1000000);
+    }
+    return NULL ;
+}
+
+int main (int argc, char *argv[]) {
+    pthread_t h1;
+    pthread_t h2;
+    pthread_create(&h1, NULL, hola, NULL);
+    pthread_create(&h2, NULL, mundo, NULL );
+    pthread_join(h1, NULL);
+    pthread_join(h2, NULL);
+    printf("Fin \n");
+}
+
+----
+Hilo2.c
+----
+
+#include <stdio.h>
+#include <pthread.h>
+
+#define N 8
+#define M 16
+
+const char *mensaje[2] = {"Hola Mundo", "Mundo Hola"};
+const int cantidad[2] = {N, M};
+
+void imprime_mensaje(void *ptr) {
+        int i;
+        int id;
+
+        id = *(int *) ptr;
+        for(i=0; i<cantidad[id]; i++)
+                printf("%s\n",mensaje[id]);
+        return;
+}
+
+
+int main(int argc, char *argv[])
+{
+        pthread_t hilo0, hilo1;
+        int id0=0, id1=1;
+
+        pthread_create(&hilo0, NULL, (void *) &imprime_mensaje, (void *) &id0);
+        pthread_create(&hilo1, NULL, (void *) &imprime_mensaje, (void *) &id1);
+
+        pthread_join(hilo0, NULL);
+        pthread_join(hilo1, NULL);
+
+        return 0;
+}
+
+Ejecutar: gcc -lpthread -o hilo1 hilo1.c
