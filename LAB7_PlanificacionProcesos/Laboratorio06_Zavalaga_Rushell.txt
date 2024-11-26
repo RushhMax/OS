@@ -1,0 +1,133 @@
+/// RUSHELL VANESSA ZAVALAGA OROZCO
+// CUI: 20202227
+
+#include <iostream>
+#include <queue>
+#include <vector>
+#include <iomanip>
+using namespace std;
+
+struct Proceso {
+    char id;
+    int tiempoLlegada, TiempoServicio, remainingTime, completionTime, turnaroundTime, tiempoEspera;
+};
+
+void roundRobin(vector<Proceso> &procesos, int quantum) {
+    int time = 0;
+    queue<int> colalista;
+    vector<bool> enCola(procesos.size(), false);
+
+    int completed = 0;
+    while (completed < procesos.size()) {
+        for (size_t i = 0; i < procesos.size(); ++i) {
+            if (procesos[i].tiempoLlegada <= time && procesos[i].remainingTime > 0 && !enCola[i]) {
+                colalista.push(i);
+                enCola[i] = true;
+            }
+        }
+
+        if (!colalista.empty()) {
+            int current = colalista.front();
+            colalista.pop();
+            enCola[current] = false;
+
+            int executionTime = min(quantum, procesos[current].remainingTime);
+            time += executionTime;
+            procesos[current].remainingTime -= executionTime;
+
+            if (procesos[current].remainingTime == 0) {
+                procesos[current].completionTime = time;
+                procesos[current].turnaroundTime = procesos[current].completionTime - procesos[current].tiempoLlegada;
+                procesos[current].tiempoEspera = procesos[current].turnaroundTime - procesos[current].TiempoServicio;
+                ++completed;
+            }
+
+            for (size_t i = 0; i < procesos.size(); ++i) {
+                if (procesos[i].tiempoLlegada <= time && procesos[i].remainingTime > 0 && !enCola[i]) {
+                    colalista.push(i);
+                    enCola[i] = true;
+                }
+            }
+
+            if (procesos[current].remainingTime > 0) {
+                colalista.push(current);
+                enCola[current] = true;
+            }
+        } else {
+            ++time;
+        }
+    }
+
+    cout << "\nRound Robin Scheduling (Quantum: " << quantum << ")\n";
+    cout << "Proceso\tArrival\tService\tCompletion\tTurnaround\tWaiting\n";
+    for (const auto &p : procesos) {
+        cout << p.id << "\t" << p.tiempoLlegada << "\t" << p.TiempoServicio << "\t"
+             << p.completionTime << "\t\t" << p.turnaroundTime << "\t\t" << p.tiempoEspera << "\n";
+    }
+}
+
+struct Proceso {
+    char id;
+    int tiempoLlegada, TiempoServicio, completionTime, turnaroundTime, waitingTime;
+};
+
+bool compareArrival(const Proceso &a, const Proceso &b) {
+    return a.tiempoLlegada < b.tiempoLlegada;
+}
+
+void sjf(vector<Proceso> &procesos) {
+    sort(procesos.begin(), procesos.end(), compareArrival);
+
+    int time = 0, completed = 0;
+    while (completed < procesos.size()) {
+        int shortest = -1;
+        for (size_t i = 0; i < procesos.size(); ++i) {
+            if (procesos[i].tiempoLlegada <= time && procesos[i].completionTime == 0) {
+                if (shortest == -1 || procesos[i].TiempoServicio < procesos[shortest].TiempoServicio) {
+                    shortest = i;
+                }
+            }
+        }
+
+        if (shortest != -1) {
+            time += procesos[shortest].TiempoServicio;
+            procesos[shortest].completionTime = time;
+            procesos[shortest].turnaroundTime = procesos[shortest].completionTime - procesos[shortest].tiempoLlegada;
+            procesos[shortest].waitingTime = procesos[shortest].turnaroundTime - procesos[shortest].TiempoServicio;
+            ++completed;
+        } else {
+            ++time; 
+        }
+    }
+
+    cout << "\nShortest Job First Scheduling\n";
+    cout << "Proceso\tArrival\tService\tCompletion\tTurnaround\tWaiting\n";
+    for (const auto &p : procesos) {
+        cout << p.id << "\t" << p.tiempoLlegada << "\t" << p.TiempoServicio << "\t"
+             << p.completionTime << "\t\t" << p.turnaroundTime << "\t\t" << p.waitingTime << "\n";
+    }
+}
+
+int main() {
+    vector<Proceso> Procesos1 = {
+        {'A', 0, 8, 8}, {'B', 1, 4, 4}, {'C', 2, 9, 9}, {'D', 3, 5, 5}
+    };
+    vector<Proceso> Procesos2 = {
+        {'A', 0, 5, 5}, {'B', 1, 3, 3}, {'C', 2, 1, 1}, {'D', 3, 2, 2}, {'E', 4, 3, 3}
+    };
+    vector<Proceso> ProcesosS = {
+        {'A', 0, 5}, {'B', 1, 3}, {'C', 2, 1}, {'D', 3, 2}, {'E', 4, 3}
+    };
+
+    cout << "Round Robin (1st Set):";
+    roundRobin(Procesos1, 3);
+
+    cout << "\nRound Robin (2nd Set):";
+    roundRobin(Procesos2, 2);
+
+    cout << "\nShortest Job First:";
+    sjf(ProcesosS);
+
+    return 0;
+}
+
